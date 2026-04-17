@@ -17,15 +17,17 @@ const SECTOR_COLORS={
 let ACTIVE = EMBEDDED;
 const state = {
   activeTab: 'rs',
-  topN: { rs:'ALL', m1:'ALL', m3:'ALL' },
+  topN: { rs:'ALL', m1:'ALL', m3:'ALL', m6:'ALL', m12:'ALL' },
   minTf: 2,
-  filters: { rs:{}, m1:{}, m3:{}, cross:{}, mom:{} },
+  filters: { rs:{}, m1:{}, m3:{}, m6:{}, m12:{}, cross:{}, mom:{} },
   sorts: {
-    rs:    [{col:'rs_score',  dir:-1}],
-    m1:    [{col:'pct_1m',   dir:-1}],
-    m3:    [{col:'pct_3m',   dir:-1}],
-    cross: [{col:'tf_count_10',dir:-1},{col:'avg_pct',dir:-1}],
-    mom:   [{col:'accel',    dir:-1}],
+    rs:    [{col:'rs_score',  dir:1}],
+    m1:    [{col:'pct_1m',   dir:1}],
+    m3:    [{col:'pct_3m',   dir:1}],
+    m6:    [{col:'pct_6m',   dir:1}],
+    m12:   [{col:'pct_12m',  dir:1}],
+    cross: [{col:'tf_count_10',dir:1},{col:'avg_pct',dir:1}],
+    mom:   [{col:'accel',    dir:1}],
   }
 };
 
@@ -160,7 +162,7 @@ document.getElementById('csv-input').addEventListener('change', function(e) {
       document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
       Object.keys(state.topN).forEach(t=>state.topN[t]='ALL');
       state.minTf=2;
-      state.sorts={rs:[{col:'rs_score',dir:-1}],m1:[{col:'pct_1m',dir:-1}],m3:[{col:'pct_3m',dir:-1}],cross:[{col:'tf_count_10',dir:-1},{col:'avg_pct',dir:-1}],mom:[{col:'accel',dir:-1}]};
+      state.sorts={rs:[{col:'rs_score',dir:1}],m1:[{col:'pct_1m',dir:1}],m3:[{col:'pct_3m',dir:1}],m6:[{col:'pct_6m',dir:1}],m12:[{col:'pct_12m',dir:1}],cross:[{col:'tf_count_10',dir:1},{col:'avg_pct',dir:1}],mom:[{col:'accel',dir:1}]};
       updateHeader(); initPills(); renderAll();
       btn.className='upload-btn success';
       st.textContent=file.name.replace('idx_rs_rankings_','').replace('.csv','');
@@ -269,12 +271,12 @@ function handleSort(tab, col) {
   const idx=sorts.findIndex(s=>s.col===col);
   if(idx===0){sorts[0].dir*=-1;}
   else if(idx>0){const[s]=sorts.splice(idx,1);s.dir=-1;sorts.unshift(s);}
-  else{sorts.unshift({col,dir:-1});if(sorts.length>3)sorts.pop();}
+  else{sorts.unshift({col,dir:1});if(sorts.length>3)sorts.pop();}
   renderTable(tab);
 }
 
 // ── RENDER TABLE ───────────────────────────────────────────
-const TAB_SORT_COL = {rs:'rs_score', m1:'pct_1m', m3:'pct_3m'};
+const TAB_SORT_COL = {rs:'rs_score', m1:'pct_1m', m3:'pct_3m', m6:'pct_6m', m12:'pct_12m'};
 
 function renderTable(tab) {
   const cols = makeCols(ACTIVE.meta, tab);
@@ -298,7 +300,7 @@ function renderTable(tab) {
   tbl.querySelector('thead').innerHTML = '<tr>' + cols.map(c => {
     const sk=c.sk||c.k; const si=sorts.findIndex(s=>s.col===sk);
     let cls=c.left?'left':'';
-    if(si===0) cls+=sorts[0].dir===-1?' sorted-desc':' sorted-asc';
+    if(si===0) cls+=sorts[0].dir===1?' sorted-desc':' sorted-asc';
     return `<th class="${cls.trim()}" onclick="handleSort('${tab}','${sk}')">${c.lbl}</th>`;
   }).join('')+'</tr>';
 
@@ -366,13 +368,13 @@ function updateHeader() {
 }
 
 function initPills() {
-  ['rs','m1','m3'].forEach(buildTopPills);
+  ['rs','m1','m3','m6','m12'].forEach(buildTopPills);
   buildTfPills();
 }
 
 function renderAll() {
   renderTable('rs');
-  if(['m1','m3','cross','mom'].includes(state.activeTab)) renderTable(state.activeTab);
+  if(['m1','m3','m6','m12','cross','mom'].includes(state.activeTab)) renderTable(state.activeTab);
   else if(state.activeTab==='sec') renderSectors();
 }
 

@@ -36,8 +36,8 @@ THRESHOLDS_DIR   = os.path.join(OUTPUT_ROOT_DIR, "thresholds")
 DIAGNOSTICS_DIR  = os.path.join(OUTPUT_ROOT_DIR, "diagnostics")
 RANKINGS_DIR     = os.path.join(OUTPUT_ROOT_DIR, "rankings")
 HISTORY_DAYS     = 500   # calendar days — enough aligned bars for RS delta lookback
-REQUEST_DELAY    = 0.3   # seconds between yfinance calls to avoid rate limiting
-MAX_WORKERS      = 10    # parallel workers for yfinance requests
+REQUEST_DELAY = float(os.environ.get("IDX_REQUEST_DELAY", REQUEST_DELAY))
+MAX_WORKERS   = int(os.environ.get("IDX_MAX_WORKERS",   MAX_WORKERS))
 MIN_TRADING_DAYS = 274   # minimum bars required; aligns with rs_delta (253 + 21)
 IDX_TICKER       = "^JKSE"
 

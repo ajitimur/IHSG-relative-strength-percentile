@@ -155,7 +155,7 @@ td.left{text-align:left;}
 .help-p code{font-family:var(--mono);font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:3px;color:var(--amber);}
 .help-table{width:100%;border-collapse:collapse;margin-bottom:16px;}
 .help-table th{font-family:var(--mono);font-size:9px;color:var(--text3);text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);letter-spacing:.06em;}
-.help-table td{font-family:var(--sans);font-size:11.5px;color:var(--text2);padding:7px 10px;border-bottom:1px solid rgba(42,47,69,.4);vertical-align:top;line-height:1.5;}
+.help-table td{font-family:var(--sans);font-size:11.5px;color:var(--text2);padding:7px 10px;border-bottom:1px solid rgba(42,47,69,.4);vertical-align:top;line-height:1.5;text-align:left;}
 .help-table td:first-child{font-family:var(--mono);font-size:11px;color:var(--amber);white-space:nowrap;}
 .help-table td b{color:var(--text);}
 .signal-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
@@ -340,6 +340,8 @@ td.left{text-align:left;}
   <div class="tab active-blue" onclick="switchTab('rs',this,'blue')">RS LEADERS</div>
   <div class="tab" onclick="switchTab('m1',this,'blue')">1M LEADERS</div>
   <div class="tab" onclick="switchTab('m3',this,'blue')">3M LEADERS</div>
+  <div class="tab" onclick="switchTab('m6',this,'blue')">6M LEADERS</div>
+  <div class="tab" onclick="switchTab('m12',this,'blue')">12M LEADERS</div>
   <div class="tab" onclick="switchTab('cross',this,'purple')">CROSS-TF</div>
   <div class="tab" onclick="switchTab('mom',this,'green')">MOMENTUM</div>
   <div class="tab" onclick="switchTab('sec',this,'amber')">SECTORS</div>
@@ -408,6 +410,48 @@ td.left{text-align:left;}
     <span class="count-label" id="m3-count"></span>
   </div>
   <div class="table-wrap"><table id="tbl-m3"><thead></thead><tbody></tbody></table></div>
+</div>
+
+<!-- 6M LEADERS -->
+<div class="panel" id="panel-m6">
+  <div class="toolbar">
+    <span class="toolbar-label">TOP</span>
+    <div class="pill-group" id="pills-m6"></div>
+    <div class="sep"></div>
+    <span class="toolbar-label">FILTER</span>
+    <button class="filter-btn" id="m6-rising" onclick="toggleFilter('m6','rising')">RS Δ Rising</button>
+    <button class="filter-btn" id="m6-near52" onclick="toggleFilter('m6','near52')">Near 52W Hi</button>
+    <div class="sep"></div>
+    <span class="toolbar-label">SMA</span>
+    <button class="filter-btn" id="m6-sma10"  onclick="toggleFilter('m6','sma10')">SMA10</button>
+    <button class="filter-btn" id="m6-sma20"  onclick="toggleFilter('m6','sma20')">SMA20</button>
+    <button class="filter-btn" id="m6-sma50"  onclick="toggleFilter('m6','sma50')">SMA50</button>
+    <button class="filter-btn" id="m6-sma200" onclick="toggleFilter('m6','sma200')">SMA200</button>
+    <div class="spacer"></div>
+    <span class="count-label" id="m6-count"></span>
+  </div>
+  <div class="table-wrap"><table id="tbl-m6"><thead></thead><tbody></tbody></table></div>
+</div>
+
+<!-- 12M LEADERS -->
+<div class="panel" id="panel-m12">
+  <div class="toolbar">
+    <span class="toolbar-label">TOP</span>
+    <div class="pill-group" id="pills-m12"></div>
+    <div class="sep"></div>
+    <span class="toolbar-label">FILTER</span>
+    <button class="filter-btn" id="m12-rising" onclick="toggleFilter('m12','rising')">RS Δ Rising</button>
+    <button class="filter-btn" id="m12-near52" onclick="toggleFilter('m12','near52')">Near 52W Hi</button>
+    <div class="sep"></div>
+    <span class="toolbar-label">SMA</span>
+    <button class="filter-btn" id="m12-sma10"  onclick="toggleFilter('m12','sma10')">SMA10</button>
+    <button class="filter-btn" id="m12-sma20"  onclick="toggleFilter('m12','sma20')">SMA20</button>
+    <button class="filter-btn" id="m12-sma50"  onclick="toggleFilter('m12','sma50')">SMA50</button>
+    <button class="filter-btn" id="m12-sma200" onclick="toggleFilter('m12','sma200')">SMA200</button>
+    <div class="spacer"></div>
+    <span class="count-label" id="m12-count"></span>
+  </div>
+  <div class="table-wrap"><table id="tbl-m12"><thead></thead><tbody></tbody></table></div>
 </div>
 
 <!-- CROSS-TF -->
