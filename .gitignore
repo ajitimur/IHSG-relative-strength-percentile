@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+ 
+# Keep only the latest 30 outputs (pruned by main.py)
+# but do commit them so GitHub Pages can serve the dashboard
+# outputs/ is NOT ignored — it's committed intentionally
+ 
+# Local dev scratch
+*.ipynb
+.DS_Store
+Thumbs.db
+ 
