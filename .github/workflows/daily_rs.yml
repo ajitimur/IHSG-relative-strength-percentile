@@ -55,7 +55,6 @@ jobs:
             outputs/idx_rs_dashboard_*.html \
             docs/index.html
 
-          # Only commit if there are actual changes
           if git diff --cached --quiet; then
             echo "No changes to commit — market may have been closed today"
           else
@@ -67,6 +66,7 @@ jobs:
           print(len(df[df.avg_vol_30d >= 1_000_000]))
           " 2>/dev/null || echo '?')
             git commit -m "RS update ${DATE} — ${LIQUID} liquid stocks"
+            git pull --rebase origin master
             git push
           fi
 
