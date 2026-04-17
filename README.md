@@ -8,7 +8,7 @@ Methodology follows [Minervini](https://www.markminervini.com/) / [Qullamaggie](
 
 ## Live Dashboard
 
-**[→ Open Dashboard](https://github.com/ajitimur/IHSG-relative-strength-percentile)**
+**[→ Open Dashboard](https://ajitimur.github.io/IHSG-relative-strength-percentile/)**
 
 Updates automatically every weekday at **16:30 WIB**. Open it, it's already current.
 
