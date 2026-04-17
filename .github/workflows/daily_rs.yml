@@ -1,0 +1,89 @@
+name: IDX RS Daily Pipeline
+
+on:
+  schedule:
+    # 16:30 WIB = 09:30 UTC, weekdays only
+    - cron: '30 9 * * 1-5'
+  workflow_dispatch:
+    # Manual trigger from GitHub Actions UI — useful for testing
+    # and for running after market close on a day you missed
+    inputs:
+      notify:
+        description: 'Log extra diagnostics'
+        required: false
+        default: 'false'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30       # hard cap — main.py should finish in ~10min
+
+    permissions:
+      contents: write          # needed to git push the output files
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run RS pipeline (main.py)
+        run: python main.py
+        env:
+          # Slightly more conservative rate limiting for GitHub's IP range
+          # Override via repo secrets if you want to tune without code changes
+          IDX_REQUEST_DELAY: ${{ vars.IDX_REQUEST_DELAY || '0.5' }}
+          IDX_MAX_WORKERS:   ${{ vars.IDX_MAX_WORKERS   || '8'   }}
+
+      - name: Build dashboard HTML (build_dashboard.py)
+        run: python build_dashboard.py
+
+      - name: Commit and push outputs
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            outputs/rankings/ \
+            outputs/idx_rs_dashboard_*.html \
+            docs/index.html
+
+          # Only commit if there are actual changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit — market may have been closed today"
+          else
+            DATE=$(date +'%Y-%m-%d')
+            LIQUID=$(python3 -c "
+          import glob, pandas as pd
+          f = sorted(glob.glob('outputs/rankings/idx_rs_rankings_*.csv'))[-1]
+          df = pd.read_csv(f)
+          print(len(df[df.avg_vol_30d >= 1_000_000]))
+          " 2>/dev/null || echo '?')
+            git commit -m "RS update ${DATE} — ${LIQUID} liquid stocks"
+            git push
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### IDX RS Pipeline" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          CSV=$(ls outputs/rankings/idx_rs_rankings_*.csv 2>/dev/null | tail -1)
+          if [ -n "$CSV" ]; then
+            echo "- **CSV**: \`$(basename $CSV)\`" >> $GITHUB_STEP_SUMMARY
+            ROWS=$(wc -l < "$CSV")
+            echo "- **Rows**: $((ROWS - 1))" >> $GITHUB_STEP_SUMMARY
+          fi
+          HTML=$(ls outputs/idx_rs_dashboard_*.html 2>/dev/null | tail -1)
+          if [ -n "$HTML" ]; then
+            SIZE=$(du -h "$HTML" | cut -f1)
+            echo "- **Dashboard**: \`$(basename $HTML)\` (${SIZE})" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **Pages URL**: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> $GITHUB_STEP_SUMMARY
