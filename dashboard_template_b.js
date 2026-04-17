@@ -393,4 +393,65 @@ function switchHelpTab(id, el) {
   el.classList.add('active');
   document.getElementById('help-'+id).classList.add('active');
 }
+function applySetup(preset) {
+  closeHelp();
+
+  Object.keys(state.filters).forEach(t => {
+    state.filters[t] = {};
+    document.querySelectorAll(`[id^="${t}-"]`).forEach(b => b.classList.remove('active'));
+  });
+  Object.keys(state.topN).forEach(t => state.topN[t] = 'ALL');
+  ['rs','m1','m3','m6','m12'].forEach(buildTopPills);
+
+  const presets = {
+    'high-conviction': {
+      tab: 'rs', color: 'blue',
+      filters: { rs: { near52: true, sma50: true, sma200: true } },
+      sort: { rs: [{col:'rs_score', dir:1}] },
+    },
+    'catching-breath': {
+      tab: 'rs', color: 'blue',
+      filters: { rs: { sma50: true, sma200: true } },
+      sort: { rs: [{col:'pct_from_52w_high', dir:1}] },
+    },
+    'stalling-leader': {
+      tab: 'rs', color: 'blue',
+      filters: { rs: {} },
+      sort: { rs: [{col:'rs_delta', dir:-1}] },
+    },
+    'emerging-leader': {
+      tab: 'cross', color: 'purple',
+      filters: { cross: { accel: true } },
+      sort: { cross: [{col:'tf_count_10', dir:1}, {col:'avg_pct', dir:1}] },
+      minTf: 2,
+    },
+  };
+
+  const cfg = presets[preset];
+  if (!cfg) return;
+
+  Object.entries(cfg.filters).forEach(([tab, fkeys]) => {
+    state.filters[tab] = { ...fkeys };
+    Object.entries(fkeys).forEach(([key, val]) => {
+      if (val) {
+        const btn = document.getElementById(`${tab}-${key}`);
+        if (btn) btn.classList.add('active');
+      }
+    });
+  });
+
+  if (cfg.sort) {
+    Object.entries(cfg.sort).forEach(([tab, sorts]) => {
+      state.sorts[tab] = sorts;
+    });
+  }
+
+  if (cfg.minTf !== undefined) {
+    state.minTf = cfg.minTf;
+    buildTfPills();
+  }
+
+  const tabEl = document.querySelector(`.tab[onclick*="'${cfg.tab}'"]`);
+  if (tabEl) switchTab(cfg.tab, tabEl, cfg.color);
+}
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeHelp(); });

@@ -174,6 +174,12 @@ td.left{text-align:left;}
 .setup-row{font-family:var(--mono);font-size:11px;color:var(--text2);margin-bottom:4px;display:flex;gap:8px;}
 .setup-row span:first-child{color:var(--text3);width:150px;flex-shrink:0;}
 .setup-row span:last-child{color:var(--text);}
+.setup-apply-btn{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 14px;border-radius:4px;border:1px solid;cursor:pointer;letter-spacing:.05em;transition:all .15s;}
+.setup-apply-btn.green{color:var(--green);border-color:var(--green);background:var(--green-bg);}
+.setup-apply-btn.blue{color:var(--blue);border-color:var(--blue);background:var(--blue-bg);}
+.setup-apply-btn.amber{color:var(--amber);border-color:var(--amber);background:var(--amber-bg);}
+.setup-apply-btn.red{color:var(--red);border-color:var(--red);background:var(--red-bg);}
+.setup-apply-btn:hover{opacity:.8;}
 </style>
 </head>
 <body>
@@ -263,6 +269,7 @@ td.left{text-align:left;}
           <div class="setup-row"><span>SMA50 / SMA200</span><span>Both above (Stage 2 confirmed)</span></div>
           <div class="setup-row"><span>Sector rank</span><span>Top 3 by composite score</span></div>
           <p class="help-p" style="margin-top:10px;margin-bottom:0">Go to chart. Confirm: rising 10/20-day, base quality (VCP or flat base), volume contraction during base. <b>Entry only on confirmed breakout with volume expansion.</b></p>
+          <button class="setup-apply-btn green" onclick="applySetup('high-conviction')">&#x25B6; Apply to RS Leaders</button>
         </div>
         <div class="setup-box">
           <div class="setup-box-title blue">CATCHING A BREATH (PULLBACK TO BASE)</div>
@@ -274,6 +281,7 @@ td.left{text-align:left;}
           <div class="setup-row"><span>SMA20</span><span>Near zero (sitting at the 20-day)</span></div>
           <div class="setup-row"><span>SMA50 / SMA200</span><span>Both above &mdash; leave SMA10/20 filters OFF</span></div>
           <p class="help-p" style="margin-top:10px;margin-bottom:0">RS Leaders tab &rarr; SMA50 + SMA200 on &rarr; sort 52W HI% ascending &rarr; look for the &minus;8% to &minus;20% band. SMA10/20 filters off &mdash; you want stocks potentially sitting at the short MAs, that is the pullback.</p>
+          <button class="setup-apply-btn blue" onclick="applySetup('catching-breath')">&#x25B6; Apply to RS Leaders</button>
         </div>
         <div class="setup-box">
           <div class="setup-box-title amber">STALLING LEADER &mdash; AVOID / EXIT WATCH</div>
@@ -282,6 +290,7 @@ td.left{text-align:left;}
           <div class="setup-row"><span>&Delta; MOM</span><span>Deeply negative (acceleration collapsing)</span></div>
           <div class="setup-row"><span>pct_1m</span><span>Collapsed vs pct_3m / pct_6m</span></div>
           <p class="help-p" style="margin-top:10px;margin-bottom:0">High historical percentile is a lagging signal. RS &Delta; and &Delta; MOM reflect the present. Do not add to positions. Watch for SMA50 break as confirmation of trend change.</p>
+          <button class="setup-apply-btn amber" onclick="applySetup('stalling-leader')">&#x25B6; Apply to RS Leaders</button>
         </div>
         <div class="setup-box">
           <div class="setup-box-title blue">EMERGING LEADER (EARLY STAGE)</div>
@@ -290,6 +299,7 @@ td.left{text-align:left;}
           <div class="setup-row"><span>avg_pct</span><span>&gt; 75</span></div>
           <div class="setup-row"><span>RS &Delta; / &Delta; MOM</span><span>Both positive and building</span></div>
           <p class="help-p" style="margin-top:10px;margin-bottom:0">Not yet a confirmed leader but building. Watch for graduation to tf=3. These are early-stage setups before they appear on the RS Leaders tab.</p>
+          <button class="setup-apply-btn blue" onclick="applySetup('emerging-leader')">&#x25B6; Apply to Cross-TF</button>
         </div>
       </div>
 
