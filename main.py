@@ -36,8 +36,8 @@ THRESHOLDS_DIR   = os.path.join(OUTPUT_ROOT_DIR, "thresholds")
 DIAGNOSTICS_DIR  = os.path.join(OUTPUT_ROOT_DIR, "diagnostics")
 RANKINGS_DIR     = os.path.join(OUTPUT_ROOT_DIR, "rankings")
 HISTORY_DAYS     = 500   # calendar days — enough aligned bars for RS delta lookback
-REQUEST_DELAY = 1
-MAX_WORKERS   = 6
+REQUEST_DELAY = 0.2   # was 1
+MAX_WORKERS   = 10    # was 6
 MIN_TRADING_DAYS = 274   # minimum bars required; aligns with rs_delta (253 + 21)
 IDX_TICKER       = "^JKSE"
 
