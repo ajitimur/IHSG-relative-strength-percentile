@@ -132,6 +132,13 @@ td.left{text-align:left;}
 .sector-tickers{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
 .sector-chip{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);}
 .sector-chip.leader{background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.3);color:var(--amber);font-weight:600;}
+.rotation-badge{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;letter-spacing:.04em;margin-bottom:4px;}
+.rotation-in      {color:var(--green); background:rgba(34,211,160,0.12);}
+.rotation-stable  {color:var(--text2); background:rgba(136,146,176,0.10);}
+.rotation-out     {color:var(--red);   background:rgba(240,96,96,0.12);}
+.rotation-unknown {color:var(--text3); background:rgba(74,85,120,0.10);}
+.rotation-caption {font-family:var(--sans);font-size:10px;color:var(--text3);line-height:1.4;margin-bottom:10px;}
+.rotation-delta   {font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:6px;}
 
 /* HELP MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;}

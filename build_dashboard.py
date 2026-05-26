@@ -15,10 +15,12 @@ Also usable locally as a standalone rebuild step.
 
 import sys
 import os
+import re
 import json
 import argparse
 import glob
 import datetime
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -125,6 +127,53 @@ def compute_sector_composite(liq):
     return sc
 
 
+def load_historical_composite(rankings_dir, current_csv_path, lookback_days=28):
+    """
+    Find CSV ~lookback_days before current_csv_path and return
+    (dict[sector -> composite], hist_date), or None on failure.
+    Prints the failure status line when returning None.
+    """
+    fname = os.path.basename(current_csv_path)
+    m = re.search(r'rankings_(\d{4}-\d{2}-\d{2})', fname)
+    if not m:
+        print(f"   History: could not parse date from {fname}, sector rotation = UNKNOWN")
+        return None
+
+    current_date = datetime.date.fromisoformat(m.group(1))
+    target_date  = current_date - datetime.timedelta(days=lookback_days)
+
+    all_files = sorted(glob.glob(os.path.join(rankings_dir, "idx_rs_rankings_*.csv")))
+    candidates = []
+    for fp in all_files:
+        dm = re.search(r'rankings_(\d{4}-\d{2}-\d{2})', os.path.basename(fp))
+        if dm:
+            candidates.append((datetime.date.fromisoformat(dm.group(1)), fp))
+
+    window_low  = target_date - datetime.timedelta(days=5)
+    window_high = target_date + datetime.timedelta(days=5)
+    in_window   = [(d, fp) for d, fp in candidates if window_low <= d <= window_high]
+
+    if not in_window:
+        print(f"   History: no comparison file found within ±5 days of {target_date}, sector rotation = UNKNOWN")
+        return None
+
+    hist_date, hist_path = min(in_window, key=lambda x: abs((x[0] - target_date).days))
+
+    try:
+        df_h  = pd.read_csv(hist_path)
+        if "sector" not in df_h.columns:
+            raise ValueError("no sector column")
+        liq_h = df_h[df_h["avg_vol_30d"] >= MIN_VOL].copy()
+        compute_cross_tf(liq_h)
+        sc_h  = compute_sector_composite(liq_h)
+        composites = dict(zip(sc_h["sector"], sc_h["composite"]))
+        return composites, hist_date
+    except Exception as e:
+        warnings.warn(f"load_historical_composite: {e}")
+        print(f"   History: no comparison file found within ±5 days of {target_date}, sector rotation = UNKNOWN")
+        return None
+
+
 def detect_columns(df):
     """Return meta flags based on which columns are present."""
     cols = set(df.columns)
@@ -168,13 +217,38 @@ def build_payload(csv_path):
     col_flags = detect_columns(df)
     run_date  = str(liq["date"].iloc[0]) if "date" in liq.columns else datetime.date.today().isoformat()
 
-    # Sector records — convert top5 list correctly
+    # Historical composites for rotation direction
+    hist_result           = load_historical_composite(RANKINGS_DIR, csv_path)
+    historical_composites = hist_result[0] if hist_result else None
+    hist_date             = hist_result[1] if hist_result else None
+
+    # Sector records — convert top5 list correctly, attach rotation fields
     sector_records = []
     for _, row in sectors.iterrows():
         d = {}
         for k, v in row.items():
             d[k] = clean_value(v)
+
+        sector            = d.get("sector")
+        current_composite = d.get("composite")
+
+        if historical_composites is None or sector not in historical_composites:
+            d["composite_delta"]    = None
+            d["rotation_direction"] = "UNKNOWN"
+        else:
+            prev  = historical_composites[sector]
+            delta = round(current_composite - prev, 1)
+            d["composite_delta"] = delta
+            if   delta >=  3: d["rotation_direction"] = "IN"
+            elif delta <= -3: d["rotation_direction"] = "OUT"
+            else:             d["rotation_direction"] = "STABLE"
+
         sector_records.append(d)
+
+    if hist_result is not None:
+        n_total   = len(sector_records)
+        n_matched = sum(1 for r in sector_records if r.get("rotation_direction") != "UNKNOWN")
+        print(f"   History: comparing to {hist_date}, {n_matched}/{n_total} sectors matched")
 
     payload = {
         "stocks":   [clean_row(r) for r in liq.to_dict("records")],
