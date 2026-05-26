@@ -665,8 +665,12 @@ function buildDataFromCSV(rows, headers) {
     return {sector,count:grp.length,
       composite:+(mb*.4+ceiling*.4+avg*.2).toFixed(1),
       multi_breadth:+mb.toFixed(1),breadth_1m:+b1.toFixed(1),breadth_3m:+b3.toFixed(1),breadth_6m:+b6.toFixed(1),
+<<<<<<< HEAD
       ceiling:+ceiling.toFixed(1),avg:+avg.toFixed(1),top5:t5.map(r=>r.ticker),
       rotation_direction:'UNKNOWN',composite_delta:null};
+=======
+      ceiling:+ceiling.toFixed(1),avg:+avg.toFixed(1),top5:t5.map(r=>r.ticker)};
+>>>>>>> 825b76545d7e17d9d6edcb1ee77ec190f438dd38
   }).sort((a,b)=>b.composite-a.composite);
 
   return { stocks:liq, momentum, cross, sectors, meta:{
@@ -852,6 +856,7 @@ function renderSectors() {
     const mc=v=>v>=50?'var(--green)':v>=30?'var(--amber)':'var(--red)';
     const bar=(lbl,val)=>`<div class="bar-row"><span class="bar-label">${lbl}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(val,100)}%;background:${fg};opacity:.7"></div></div><span class="bar-val">${(+val).toFixed(0)}</span></div>`;
     const chips=(s.top5||[]).map((t,ti)=>`<span class="sector-chip${ti===0?' leader':''}">${t}</span>`).join('');
+<<<<<<< HEAD
     const ROT_LABELS = {
       IN:      {cls:'rotation-in',      arrow:'↑', label:'ROTATING IN',  caption:'Composite has expanded vs 4 weeks ago'},
       STABLE:  {cls:'rotation-stable',  arrow:'→', label:'STABLE',        caption:'Composite roughly unchanged vs 4 weeks ago'},
@@ -869,6 +874,11 @@ function renderSectors() {
         <span class="rotation-badge ${rot.cls}">${rot.arrow} ${rot.label}</span>${deltaStr}
       </div>
       <div class="rotation-caption">${rot.caption}</div>
+=======
+    return `<div class="sector-card">
+      <div class="sector-card-header"><span class="sector-card-name" style="color:${fg}">${s.sector}</span><span class="sector-card-rank">#${i+1} · ${s.count} stocks</span></div>
+      <div class="sector-composite">${s.composite.toFixed(1)}</div>
+>>>>>>> 825b76545d7e17d9d6edcb1ee77ec190f438dd38
       <div class="sector-metrics">
         <div class="sector-metric"><div class="sector-metric-label">BREADTH 1M</div><div class="sector-metric-val" style="color:${mc(s.breadth_1m)}">${s.breadth_1m.toFixed(0)}%</div></div>
         <div class="sector-metric"><div class="sector-metric-label">BREADTH 3M</div><div class="sector-metric-val" style="color:${mc(s.breadth_3m)}">${s.breadth_3m.toFixed(0)}%</div></div>
