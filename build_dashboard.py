@@ -75,6 +75,29 @@ def compute_cross_tf(liq):
     ).round(1)
 
 
+def compute_status(liq):
+    """Add a 'status' column classifying each stock as ACTIVE/STALLING/EMERGING/''.
+
+    First match wins. Empty string (not None) keeps the JSON payload clean and
+    matches the JS upload path so renderers can treat both sources identically.
+    """
+    def _classify(row):
+        tfc = row.get("tf_count_10")
+        sh  = row.get("shape_score")
+        ap  = row.get("avg_pct")
+        if tfc is None or sh is None:
+            return ""
+        if tfc >= 3 and sh > 0:
+            return "ACTIVE"
+        if tfc >= 3 and sh <= 0:
+            return "STALLING"
+        if tfc == 2 and sh > 0 and ap is not None and ap > 75:
+            return "EMERGING"
+        return ""
+
+    liq["status"] = liq.apply(_classify, axis=1)
+
+
 def compute_momentum_gainers(liq):
     """Return momentum gainers sorted by accel descending."""
     mask = (
@@ -208,6 +231,7 @@ def build_payload(csv_path):
     df, liq = load_and_filter(csv_path)
 
     compute_cross_tf(liq)
+    compute_status(liq)
     momentum = compute_momentum_gainers(liq)
     sectors  = compute_sector_composite(liq)
     cross    = liq[liq["tf_count_10"] >= 2].sort_values(

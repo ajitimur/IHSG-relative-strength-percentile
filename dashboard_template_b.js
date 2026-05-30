@@ -16,9 +16,10 @@ const SECTOR_COLORS={
 // ── STATE ──────────────────────────────────────────────────
 let ACTIVE = EMBEDDED;
 const state = {
-  activeTab: 'rs',
+  activeTab: 'cross',
   topN: { rs:'ALL', m1:'ALL', m3:'ALL', m6:'ALL', m12:'ALL' },
-  minTf: 2,
+  minTf: 3,
+  extraFilter: null,
   filters: { rs:{}, m1:{}, m3:{}, m6:{}, m12:{}, cross:{}, mom:{} },
   sorts: {
     rs:    [{col:'rs_score',  dir:1}],
@@ -72,6 +73,7 @@ function setTopN(tab, val) {
 
 function setMinTf(val) {
   state.minTf = val;
+  state.extraFilter = null;
   buildTfPills();
   renderTable('cross');
 }
@@ -114,6 +116,10 @@ function buildDataFromCSV(rows, headers) {
       (r.pct_1m - r.pct_3m)*0.3 +
       (r.pct_3m - r.pct_6m)*0.2
     ).toFixed(1));
+    if      (r.tf_count_10 >= 3 && r.shape_score >  0)                                r.status = 'ACTIVE';
+    else if (r.tf_count_10 >= 3 && r.shape_score <= 0)                                r.status = 'STALLING';
+    else if (r.tf_count_10 === 2 && r.shape_score > 0 && r.avg_pct != null && r.avg_pct > 75) r.status = 'EMERGING';
+    else                                                                              r.status = '';
   });
 
   const momentum = liq.filter(r =>
@@ -135,11 +141,15 @@ function buildDataFromCSV(rows, headers) {
     const meds=t5.map(r=>r.pct_1m).sort((a,b)=>a-b);
     const ceiling=meds[Math.floor(meds.length/2)];
     const avg=grp.reduce((s,r)=>s+(r.pct_1m||0),0)/grp.length;
+    const rotation_signal = +(b1*0.6 + (b1 - b6)*0.4).toFixed(1);
+    const rotation_direction = rotation_signal >= 50 ? 'IN'
+                             : rotation_signal >= 30 ? 'STABLE'
+                             :                          'OUT';
     return {sector,count:grp.length,
       composite:+(mb*.4+ceiling*.4+avg*.2).toFixed(1),
       multi_breadth:+mb.toFixed(1),breadth_1m:+b1.toFixed(1),breadth_3m:+b3.toFixed(1),breadth_6m:+b6.toFixed(1),
       ceiling:+ceiling.toFixed(1),avg:+avg.toFixed(1),top5:t5.map(r=>r.ticker),
-      rotation_direction:'UNKNOWN',composite_delta:null};
+      rotation_direction, rotation_signal, composite_delta:null, rotation_is_proxy:true};
   }).sort((a,b)=>b.composite-a.composite);
 
   return { stocks:liq, momentum, cross, sectors, meta:{
@@ -162,7 +172,8 @@ document.getElementById('csv-input').addEventListener('change', function(e) {
       Object.keys(state.filters).forEach(t=>state.filters[t]={});
       document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
       Object.keys(state.topN).forEach(t=>state.topN[t]='ALL');
-      state.minTf=2;
+      state.minTf=3;
+      state.extraFilter=null;
       state.sorts={rs:[{col:'rs_score',dir:1}],m1:[{col:'pct_1m',dir:1}],m3:[{col:'pct_3m',dir:1}],m6:[{col:'pct_6m',dir:1}],m12:[{col:'pct_12m',dir:1}],cross:[{col:'tf_count_10',dir:1},{col:'avg_pct',dir:1}],mom:[{col:'accel',dir:1}]};
       updateHeader(); initPills(); renderAll();
       btn.className='upload-btn success';
@@ -182,6 +193,13 @@ const fmtDMom=v=>{ if(v==null)return N(); const c=v>2?'delta-green':v<-2?'delta-
 const fmt52w=v=>{ if(v==null)return N(); const c=v>=-10?'hi-green':v>=-25?'hi-amber':'hi-red'; return`<span class="${c}">${v>0?'+':''}${v.toFixed(1)}%</span>`; };
 const fmtSma=v=>{ if(v==null)return N(); const c=v>0?'sma-pos':v<0?'sma-neg':'sma-neu'; return`<span class="${c}">${v>0?'+':''}${v.toFixed(1)}%</span>`; };
 const fmtSector=s=>{ const[fg,bg]=SECTOR_COLORS[s]||['#8892b0','rgba(136,146,176,0.12)']; return`<span class="sector-badge" style="color:${fg};background:${bg}">${s||'—'}</span>`; };
+
+function fmtStatus(s) {
+  if (!s) return N();
+  const cls = {ACTIVE:'status-active', EMERGING:'status-emerging', STALLING:'status-stalling'}[s];
+  return `<span class="status-badge ${cls}">${s}</span>`;
+}
+const STATUS_RANK = {ACTIVE:3, EMERGING:2, STALLING:1, '':0};
 
 function fmtShape(v) {
   if (v==null) return N();
@@ -215,6 +233,9 @@ function makeCols(meta, mode) {
       {k:'avg_pct',    lbl:'AVG PCTILE',      left:false,fmt:v=>v!=null?`<span class="avg-cell">${v.toFixed(0)}</span>`:N()},
       {k:'shape_score',lbl:'SHAPE SCORE',     left:false,fmt:fmtShape},
     );
+  }
+  if (mode==='rs' || mode==='cross') {
+    base.splice(3,0,{k:'status',lbl:'STATUS',left:false,fmt:fmtStatus});
   }
   if (meta.has_rs_delta)          base.push({k:'rs_delta',          lbl:'RS Δ 4W<span class="badge-new">NEW</span>',  left:false,fmt:fmtDelta});
   if (meta.has_rs_delta_momentum) base.push({k:'rs_delta_momentum', lbl:'Δ MOM<span class="badge-new">NEW</span>',    left:false,fmt:fmtDMom});
@@ -252,8 +273,10 @@ function applyFilters(tab, data) {
 function sortData(data, sorts) {
   return [...data].sort((a,b)=>{
     for(const {col,dir} of sorts){
-      const va=col==='sector'?(a.sector||''):(a[col]??-Infinity);
-      const vb=col==='sector'?(b.sector||''):(b[col]??-Infinity);
+      let va, vb;
+      if (col==='sector')      { va=a.sector||'';                 vb=b.sector||''; }
+      else if (col==='status') { va=STATUS_RANK[a.status||'']??0; vb=STATUS_RANK[b.status||'']??0; }
+      else                     { va=a[col]??-Infinity;            vb=b[col]??-Infinity; }
       if(va<vb)return dir; if(va>vb)return -dir;
     }
     return 0;
@@ -262,6 +285,7 @@ function sortData(data, sorts) {
 
 function toggleFilter(tab, key) {
   state.filters[tab][key]=!state.filters[tab][key];
+  state.extraFilter = null;
   const btn=document.getElementById(`${tab}-${key}`);
   if(btn) btn.classList.toggle('active', state.filters[tab][key]);
   renderTable(tab);
@@ -292,6 +316,12 @@ function renderTable(tab) {
     data = applyTopN(data, tab, primaryCol);
   }
   data = applyFilters(tab, data);
+  if (tab === 'cross' && state.extraFilter === 'tradeable-now') {
+    data = data.filter(r =>
+      r.percentile     != null && r.percentile     >= 85 &&
+      r.price_vs_sma10 != null && r.price_vs_sma10 >= -5 && r.price_vs_sma10 <= 10
+    );
+  }
   const sorted = sortData(data, state.sorts[tab]);
   const total  = sorted.length;
 
@@ -306,9 +336,14 @@ function renderTable(tab) {
   }).join('')+'</tr>';
 
   tbl.querySelector('tbody').innerHTML = sorted.map((row,i)=>{
-    const p=i/total;
-    const tier=p<0.01?'tier-gold':p<0.02?'tier-silver':p<0.05?'tier-blue':'';
-    return `<tr class="${tier}">${cols.map(c=>{
+    let rowCls = '';
+    if (tab === 'rs' || tab === 'cross') {
+      rowCls = row.status === 'ACTIVE'   ? 'row-active'
+             : row.status === 'EMERGING' ? 'row-emerging'
+             : row.status === 'STALLING' ? 'row-stalling'
+             : '';
+    }
+    return `<tr class="${rowCls}">${cols.map(c=>{
       const v=row[c.sk||c.k]!==undefined?row[c.sk||c.k]:row[c.k];
       return `<td${c.left?' class="left"':''}>${c.fmt(v,row)}</td>`;
     }).join('')}</tr>`;
@@ -316,6 +351,18 @@ function renderTable(tab) {
 
   const ce=document.getElementById(tab+'-count');
   if(ce) ce.textContent=total+' stocks';
+
+  if (tab === 'cross') {
+    const chip = document.getElementById('cross-extrafilter-chip');
+    if (chip) {
+      if (state.extraFilter === 'tradeable-now') {
+        chip.style.display = 'inline-block';
+        chip.classList.add('active');
+      } else {
+        chip.style.display = 'none';
+      }
+    }
+  }
 }
 
 // ── RENDER SECTORS ─────────────────────────────────────────
@@ -332,6 +379,13 @@ function renderSectors() {
       UNKNOWN: {cls:'rotation-unknown', arrow:'·', label:'NO HISTORY',   caption:'No comparison data available'},
     };
     const rot = ROT_LABELS[s.rotation_direction] || ROT_LABELS.UNKNOWN;
+    const isProxy = s.rotation_is_proxy === true;
+    const rotLabel   = isProxy ? `${rot.label} (proxy)` : rot.label;
+    const rotCaption = isProxy
+      ? ({IN:'1M breadth strong, accelerating vs 6M',
+          STABLE:'Steady breadth, no clear direction',
+          OUT:'1M breadth weak vs 6M, sector cooling'}[s.rotation_direction] || rot.caption)
+      : rot.caption;
     const deltaStr = (s.composite_delta != null)
       ? `<span class="rotation-delta">${s.composite_delta > 0 ? '+' : ''}${s.composite_delta.toFixed(1)}</span>`
       : '';
@@ -339,9 +393,9 @@ function renderSectors() {
       <div class="sector-card-header"><span class="sector-card-name" style="color:${fg}">${s.sector}</span><span class="sector-card-rank">#${i+1} · ${s.count} stocks</span></div>
       <div class="sector-composite">${s.composite.toFixed(1)}</div>
       <div>
-        <span class="rotation-badge ${rot.cls}">${rot.arrow} ${rot.label}</span>${deltaStr}
+        <span class="rotation-badge ${rot.cls}">${rot.arrow} ${rotLabel}</span>${deltaStr}
       </div>
-      <div class="rotation-caption">${rot.caption}</div>
+      <div class="rotation-caption">${rotCaption}</div>
       <div class="sector-metrics">
         <div class="sector-metric"><div class="sector-metric-label">BREADTH 1M</div><div class="sector-metric-val" style="color:${mc(s.breadth_1m)}">${s.breadth_1m.toFixed(0)}%</div></div>
         <div class="sector-metric"><div class="sector-metric-label">BREADTH 3M</div><div class="sector-metric-val" style="color:${mc(s.breadth_3m)}">${s.breadth_3m.toFixed(0)}%</div></div>
@@ -373,13 +427,13 @@ function updateHeader() {
   document.getElementById('hDate').textContent  = m.date;
   document.getElementById('hLiq').textContent   = m.liquid_count;
   document.getElementById('hTotal').textContent = m.total_count;
-  const badges=[];
-  if(m.has_rs_delta)          badges.push('RS Δ');
-  if(m.has_rs_delta_momentum) badges.push('Δ MOM');
-  if(m.has_pct_52w)           badges.push('52W HI%');
-  if(m.has_sma10)             badges.push('SMA10');
-  if(m.has_sma20)             badges.push('SMA20');
-  document.getElementById('newBadgeWrap').innerHTML=badges.map(b=>`<span class="badge-new">${b}</span>`).join(' ');
+  const counts = {ACTIVE: 0, EMERGING: 0};
+  ACTIVE.stocks.forEach(r => {
+    if      (r.status === 'ACTIVE')   counts.ACTIVE++;
+    else if (r.status === 'EMERGING') counts.EMERGING++;
+  });
+  document.getElementById('hActive').textContent   = counts.ACTIVE;
+  document.getElementById('hEmerging').textContent = counts.EMERGING;
 }
 
 function initPills() {
@@ -397,7 +451,7 @@ function renderAll() {
 EMBEDDED.momentum.forEach(r=>{ if(r.accel==null) r.accel=r.pct_1m-r.pct_3m; });
 updateHeader();
 initPills();
-renderTable('rs');
+renderTable('cross');
 
 // ── HELP MODAL ─────────────────────────────────────────────
 function openHelp()  { document.getElementById('help-modal').classList.add('open'); }
@@ -408,6 +462,13 @@ function switchHelpTab(id, el) {
   el.classList.add('active');
   document.getElementById('help-'+id).classList.add('active');
 }
+function clearExtraFilter() {
+  state.extraFilter = null;
+  const chip = document.getElementById('cross-extrafilter-chip');
+  if (chip) chip.style.display = 'none';
+  renderTable('cross');
+}
+
 function applySetup(preset) {
   closeHelp();
 
@@ -416,9 +477,17 @@ function applySetup(preset) {
     document.querySelectorAll(`[id^="${t}-"]`).forEach(b => b.classList.remove('active'));
   });
   Object.keys(state.topN).forEach(t => state.topN[t] = 'ALL');
+  state.extraFilter = null;
   ['rs','m1','m3','m6','m12'].forEach(buildTopPills);
 
   const presets = {
+    'tradeable-now': {
+      tab: 'cross', color: 'purple',
+      filters: { cross: { accel: true, near52: true, sma50: true, sma200: true } },
+      sort: { cross: [{col:'avg_pct', dir:1}] },
+      minTf: 3,
+      extraFilter: 'tradeable-now',
+    },
     'high-conviction': {
       tab: 'rs', color: 'blue',
       filters: { rs: { near52: true, sma50: true, sma200: true } },
@@ -444,6 +513,8 @@ function applySetup(preset) {
 
   const cfg = presets[preset];
   if (!cfg) return;
+
+  state.extraFilter = cfg.extraFilter || null;
 
   Object.entries(cfg.filters).forEach(([tab, fkeys]) => {
     state.filters[tab] = { ...fkeys };

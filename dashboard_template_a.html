@@ -81,14 +81,18 @@ th.sorted-asc::after{content:' ▲';color:var(--blue);}
 tbody tr{border-bottom:1px solid rgba(42,47,69,.5);transition:background .1s;}
 tbody tr:last-child{border-bottom:none;}
 tbody tr:hover{background:rgba(255,255,255,.025);}
-tbody tr.tier-gold{background:rgba(255,215,0,.04);}
-tbody tr.tier-silver{background:rgba(192,200,224,.03);}
-tbody tr.tier-blue{background:rgba(79,142,247,.03);}
+tbody tr.row-active   {background:rgba(34,211,160,0.05);}
+tbody tr.row-emerging {background:rgba(79,142,247,0.05);}
+tbody tr.row-stalling {background:rgba(245,166,35,0.04);}
 td{padding:7px 10px;text-align:right;white-space:nowrap;}
 td.left{text-align:left;}
 .rank-cell{color:var(--text3);font-size:10px;}
 .ticker{font-weight:600;font-size:12px;color:var(--text);letter-spacing:.04em;}
 .sector-badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;font-family:var(--mono);font-weight:500;white-space:nowrap;}
+.status-badge{display:inline-block;font-size:9px;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-weight:600;letter-spacing:.04em;white-space:nowrap;}
+.status-active   {color:var(--green); background:rgba(34,211,160,0.12);}
+.status-emerging {color:var(--blue);  background:rgba(79,142,247,0.12);}
+.status-stalling {color:var(--amber); background:rgba(245,166,35,0.12);}
 .null-val{color:var(--text3);font-size:10px;}
 
 /* VALUE COLORS */
@@ -268,6 +272,17 @@ td.left{text-align:left;}
       <div class="modal-section" id="help-setups">
         <div class="help-h1">SETUP PROFILES</div>
         <div class="setup-box">
+          <div class="setup-box-title">TRADEABLE NOW (DAILY SCREEN)</div>
+          <div class="setup-row"><span>RS %ILE</span><span>&ge; 85</span></div>
+          <div class="setup-row"><span># TFs (top 10%)</span><span>&ge; 3</span></div>
+          <div class="setup-row"><span>SHAPE SCORE</span><span>&gt; 0 (accelerating)</span></div>
+          <div class="setup-row"><span>52W HI%</span><span>&ge; &minus;15% (near highs)</span></div>
+          <div class="setup-row"><span>SMA10</span><span>Price within &minus;5% to +10% (not extended)</span></div>
+          <div class="setup-row"><span>SMA50 / SMA200</span><span>Both above (Stage 2 confirmed)</span></div>
+          <p class="help-p" style="margin-top:10px;margin-bottom:0">One-click daily screen. Surfaces active leaders that are still expanding and not yet extended from the 10-day. These are the stocks where an HTF setup is most likely to form cleanly. Always confirm chart structure before entry.</p>
+          <button class="setup-apply-btn green" onclick="applySetup('tradeable-now')">&#x25B6; Apply to Cross-TF</button>
+        </div>
+        <div class="setup-box">
           <div class="setup-box-title">HIGH-CONVICTION BREAKOUT CANDIDATE</div>
           <div class="setup-row"><span>RS %ILE</span><span>&ge; 90</span></div>
           <div class="setup-row"><span>RS &Delta; 4W</span><span>&gt; 0 (expanding)</span></div>
@@ -343,7 +358,8 @@ td.left{text-align:left;}
       <span><b id="hDate">—</b></span>
       <span>LIQUID <b id="hLiq">—</b></span>
       <span>UNIVERSE <b id="hTotal">—</b></span>
-      <span id="newBadgeWrap"></span>
+      <span>ACTIVE <b id="hActive" style="color:var(--green)">—</b></span>
+      <span>EMERGING <b id="hEmerging" style="color:var(--blue)">—</b></span>
     </div>
   </div>
   <div class="upload-zone">
@@ -354,12 +370,12 @@ td.left{text-align:left;}
 </div>
 
 <div class="tabs">
-  <div class="tab active-blue" onclick="switchTab('rs',this,'blue')">RS LEADERS</div>
+  <div class="tab" onclick="switchTab('rs',this,'blue')">RS LEADERS</div>
   <div class="tab" onclick="switchTab('m1',this,'blue')">1M LEADERS</div>
   <div class="tab" onclick="switchTab('m3',this,'blue')">3M LEADERS</div>
   <div class="tab" onclick="switchTab('m6',this,'blue')">6M LEADERS</div>
   <div class="tab" onclick="switchTab('m12',this,'blue')">12M LEADERS</div>
-  <div class="tab" onclick="switchTab('cross',this,'purple')">CROSS-TF</div>
+  <div class="tab active-purple" onclick="switchTab('cross',this,'purple')">CROSS-TF</div>
   <div class="tab" onclick="switchTab('mom',this,'green')">MOMENTUM</div>
   <div class="tab" onclick="switchTab('sec',this,'amber')">SECTORS</div>
 </div>
@@ -367,7 +383,7 @@ td.left{text-align:left;}
 <div class="content">
 
 <!-- RS LEADERS -->
-<div class="panel active" id="panel-rs">
+<div class="panel" id="panel-rs">
   <div class="toolbar">
     <span class="toolbar-label">TOP</span>
     <div class="pill-group" id="pills-rs"></div>
@@ -472,7 +488,7 @@ td.left{text-align:left;}
 </div>
 
 <!-- CROSS-TF -->
-<div class="panel" id="panel-cross">
+<div class="panel active" id="panel-cross">
   <div class="toolbar">
     <span class="toolbar-label">MIN TF</span>
     <div class="pill-group" id="pills-cross-tf"></div>
@@ -487,6 +503,7 @@ td.left{text-align:left;}
     <button class="filter-btn" id="cross-sma20"  onclick="toggleFilter('cross','sma20')">SMA20</button>
     <button class="filter-btn" id="cross-sma50"  onclick="toggleFilter('cross','sma50')">SMA50</button>
     <button class="filter-btn" id="cross-sma200" onclick="toggleFilter('cross','sma200')">SMA200</button>
+    <span id="cross-extrafilter-chip" style="display:none" class="filter-btn active" onclick="clearExtraFilter()">TRADEABLE NOW &#x2715;</span>
     <div class="spacer"></div>
     <span class="count-label" id="cross-count"></span>
   </div>
