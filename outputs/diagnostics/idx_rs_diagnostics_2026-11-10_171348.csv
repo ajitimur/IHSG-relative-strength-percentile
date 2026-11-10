@@ -1,2 +1,2 @@
 date,universe_total,scored,rejected,skipped,coverage_pct,reject_download_empty_or_no_close,reject_too_few_raw_bars,reject_price_below_min,reject_stale_ratio,reject_too_few_non_outlier_bars,reject_fetch_exception,reject_misc,skip_insufficient_overlap,skip_invalid_perf,skip_below_rs_min,skip_misc
-2026-09-25,956,474,482,3,49.58,42,4,4,432,0,0,0,0,0,3,0
+2026-11-10,956,540,416,4,56.49,42,5,3,366,0,0,0,0,0,4,0
